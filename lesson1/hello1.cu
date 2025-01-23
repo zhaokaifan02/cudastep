@@ -18,6 +18,7 @@ __global__ void hello_from_gpu()
    /**
     * 推广多网络这种blockDim.x 这个是很像c++的结构体的
    */
+  
 }
 
 int main(void)
