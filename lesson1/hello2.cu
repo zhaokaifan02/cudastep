@@ -49,5 +49,5 @@ int main()
  * 回忆回忆，前面讲的
  * gridDim和blockDim，如果他是三维的话，那么
  * 真实的线程id为
- * int tid = threadIdx.z * blockDim.x*blockDimy
+ * int tid = threadIdx.z *
 */
