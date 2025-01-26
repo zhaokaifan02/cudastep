@@ -1,0 +1,25 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "cppbuild",
+			"label": "C/C++: gcc.exe 生成活动文件",
+			"command": "D:/msys64-gcc11-OPENCV/msys64-gcc11.3-20220427/msys64-tmp/user/bin/gcc.exe",
+			"args": [
+				"-fdiagnostics-color=always",
+				"-g",
+				"${file}",
+				"-o",
+				"${fileDirname}\\${fileBasenameNoExtension}.exe"
+			],
+			"options": {
+				"cwd": "D:/msys64-gcc11-OPENCV/msys64-gcc11.3-20220427/msys64-tmp/user/bin"
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build",
+			"detail": "编译器: D:/msys64-gcc11-OPENCV/msys64-gcc11.3-20220427/msys64-tmp/mingw64/bin/gcc.exe"
+		}
+	]
+}
