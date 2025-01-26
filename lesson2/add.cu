@@ -41,7 +41,10 @@ int main()
     const int block_size = 128; //先设定一个一个线程块里最多128个
     const int grid_size = N/block_size; //因为一共N个元素，所以分成N/128个线程块
     //相当于每个线程只处理一个加法
-    add<<<grid_size,block_size>>>(gpu_x,gpu_y,gpu_z);
+    add<<<grid_size,block_size>>>(gpu_x,gpu_y,gpu_z); //传给和函数的指针必须指向device内存 就是GPU里的 
+    //核函数不能成为一个类的成员
+    //以前核函数之间不能相互调用
+    //3.5之后就可以了  动态并行机制 dynamic parallelism
     cudaMemcpy(cpu_z,gpu_z,M,cudaMemcpyDeviceToHost); //再把GPU拿回CPU
 
 
@@ -61,7 +64,7 @@ int main()
     return 0;
 }
 //gpu runtime : 1306450 us
-__global__ void add(const double *x,const  double* y, double* z)
+__global__ void add(const double *x,const  double* y, double* z) 
 {
     const int index = blockIdx.x * blockDim.x + threadIdx.x; 
     //bid表示在第几个块，dim每个block有几块，
