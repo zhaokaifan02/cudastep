@@ -55,3 +55,6 @@ void check(const double* z,const int N)
     }
     printf("%s\n",has_error?"HAS ERRORS":"NO ERRORS");
 }
+
+//cpu runtime : 1006144 us
+//gpu runtime : 1306450 us
