@@ -131,6 +131,58 @@ real reduce_shared_syncthreads(real* d_x)
     return result;
 }
 
+__global__ void  reduce_dynamic(real *d_x, real *d_y)
+{
+    const int tid = threadIdx.x;
+    const int bid = blockIdx.x;
+    const int n = bid * blockDim.x + tid;
+    extern __shared__ real s_y[]; //调用时需要参数
+    s_y[tid] = (n < N) ? d_x[n] : 0.0;
+    __syncthreads();
+
+    for (int offset = blockDim.x >> 1; offset > 0; offset >>= 1)
+    {
+
+        if (tid < offset)
+        {
+            s_y[tid] += s_y[tid + offset];
+        }
+        __syncthreads();
+    }
+
+    if (tid == 0)
+    {
+        d_y[bid] = s_y[0];
+    }
+}
+
+real reduce_shared_dynamic_syncthreads(real* d_x)
+{
+    int grid_size = (N + BLOCK_SIZE - 1) / BLOCK_SIZE; //划分大小
+    const int ymem = sizeof(real) * grid_size; //开空间计算后的y
+    const int smem = sizeof(real) * BLOCK_SIZE; //要开的共享内存y的大小
+    real *d_y;
+    CHECK(cudaMalloc(&d_y, ymem));
+    real *h_y = (real *) malloc(ymem); //
+
+    reduce_dynamic<<<grid_size,BLOCK_SIZE,smem>>>(d_x,d_y);
+
+    CHECK(cudaMemcpy(h_y, d_y, ymem, cudaMemcpyDeviceToHost)); //拷回host里
+    real result = 0.0;
+    for(int i = 0;i<grid_size;i++)
+    {
+        result +=h_y[i];
+    }
+    
+    free(h_y);
+    cudaFree(d_y);
+    return result;
+}
+
+
+
+
+
 void timing(real *h_x, real *d_x, const int method)
 {
     real sum = 0;
@@ -151,6 +203,9 @@ void timing(real *h_x, real *d_x, const int method)
             break;
             case 1:
             sum = reduce_shared_syncthreads(d_x);
+            break;
+            case 3:
+            sum = reduce_shared_dynamic_syncthreads(d_x);
             break;
             default:
             printf("wrong method\n");
