@@ -24,4 +24,5 @@ void copyMatrix(double* d_A,double* d_B,const int N)
     const dim3 grid_size(grid_size_x,grid_size_y); //每个gird只处理一个片
     copy<<<grid_size,block_size>>>(d_A,d_B,N);
 }
+
     
