@@ -177,3 +177,7 @@ void print_matrix(const int N, const real *A)
         printf("\n");
     }
 }
+
+//总结，在拿去全局内存时，最核心的优化思路就是
+//1. 读写时合并访问
+//2. 用共享内存
