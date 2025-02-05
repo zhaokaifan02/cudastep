@@ -195,5 +195,134 @@ T __shfl _ xor _ sync(mask, v , laneMask, w);
 
 
 
+# 总结
+
+block内的线程，可以通过share_memory进行交互。
+
+但是，memory他毕竟是memory。肯定没有寄存器register块啊。
+
+所以在warp内，可以用寄存器交互。
+
+然后warp还可以画出逻辑的子warp，w
+
+通过三个选择函数，来标出哪些w中的线程要处理。
+
+然后利用那四个shuffle操作，实现快速的访问。
+
+
+
+## 协作组
+
+前面讲过，warp内的线程，可以通过ballot+shuffle实现交互。
+
+现在，我想实现，线程块内部间的通信，和线程块之间的通信，以及多GPU的设备间的写作
+
+```
+#include <cooperative_groups.h>
+using namespace cooperative_groups;
+
+```
+
+
+
+这个很简单啊，就是从使用者的角度来整体管理block了
+
+
+
+```c
+__global__ void warp_reduce_kernel(int *data) {
+    thread_block block = this_thread_block(); //获得这个线程所在的block
+    thread_block_tile<32> warp = tiled_partition<32>(block); // 将线程块划分为32线程的组
+
+    int local_val = data[block.thread_index]; //获得这个线程id
+    // Warp级别的归约
+    for (int offset = warp.size() / 2; offset > 0; offset /= 2) {
+        int remote_val = warp.shfl_down(local_val, offset);
+        local_val += remote_val;
+    }
+    // 仅第一个线程存储结果
+    if (warp.thread_rank() == 0) {
+        data[blockIdx.x] = local_val;
+    }
+}
+```
+
+
+
+这些函数和前面的投票函数与洗牌函数是一样的，只不过不能指定mask了，因为分片来的partition中的每一个都需要参与运算。
+
+这些人为划分出来的线程片，也具有前面shfl交换的功能。
+
+
+
+# 合并内存访问
+
+
+
+在 CUDA 中，内存访问合并（coalescing）是通过合理的内存访问模式来提高性能的关键。以下是为什么让相邻的线程访问相邻的数据能保证内存访问合并的原因：
+
+### 1. **内存访问模式**
+
+- **全局内存的结构**：在 GPU 中，全局内存是以 32 字节（或 64 字节）为单位进行访问的。当多个线程同时访问相邻的内存地 址时，它们的访问可以被合并为一个内存事务。
+- **线程和内存地址的关系**：如果线程 0 访问 `data[0]`，线程 1 访问 `data[1]`，以此类推，那么访问的内存地址是连续的。GPU 能够在同一时间将所有这些请求合并为一次大的内存访问。
+
+### 2. **合并访问的示例**
+
+假设有一个数组 `data`，其元素是连续存储的。以下是一个简单的示例：
+
+```
+__global__ void kernel(float *data) {
+    int tid = threadIdx.x + blockIdx.x * blockDim.x;
+    if (tid < N) {
+        // 每个线程处理相邻的数据
+        data[tid] *= 2.0f;
+    }
+}
+```
+
+在这个例子中：
+
+- 线程 0 访问 `data[0]`
+- 线程 1 访问 `data[1]`
+- 线程 2 访问 `data[2]`
+
+因为这些访问是相邻的，GPU 可以将这些请求合并成一个内存事务，从而提高内存访问效率。
+
+### 3. **非合并访问的情况**
+
+如果线程访问的内存地址不相邻，例如：
+
+```
+__global__ void kernel(float *data) {
+    int tid = threadIdx.x + blockIdx.x * blockDim.x;
+    if (tid < N) {
+        // 非相邻的访问模式
+        data[tid * 10] *= 2.0f; // 线程 0 访问 data[0], 线程 1 访问 data[10]
+    }
+}
+```
+
+在这种情况下：
+
+- 线程 0 访问 `data[0]`
+- 线程 1 访问 `data[10]`
+
+由于访问地址相隔较远，GPU 无法将这些访问合并，会造成多个独立的内存事务，从而降低性能。
+
+### 4. **内存带宽的利用**
+
+合并访问可以显著提高内存带宽的利用率。通过让相邻线程访问相邻的数据，可以减少内存访问的延迟，并充分利用可用的带宽。
+
+### 总结
+
+让相邻线程访问相邻的数据可以确保内存访问是合并的，因为：
+
+- 内存访问模式是连续的，允许 GPU 将多个访问合并为一次大事务。
+- 减少了内存访问的延迟，提高了带宽利用率。
+
+这种设计在编写高性能的 CUDA 代码时至关重要。
+
+
+
 
 
