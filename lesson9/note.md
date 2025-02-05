@@ -125,7 +125,7 @@ __all_sync(mask,predicate);
 
 返回值为0和1.
 
-参与现成的predicate都不为0时才返回1
+参与现成的predicate都不为0时才返回1。就是都为真就是真，predicate是一种判断
 
 __any_sync(mask,predicate);
 
@@ -186,6 +186,8 @@ T __shfl _ xor _ sync(mask, v , laneMask, w);
 异或后的结果分别是 2 3 0 1 6 7 4 5。
 
 发现什么了吗？用xor交换，可以实现上面的三个交换！！奇妙desuwa
+
+只要我们合理设计laneMask
 
 
 
