@@ -94,16 +94,16 @@ void __global__ reduce_shfl(const real *d_x, real *d_y, const int N)
         __syncthreads();
     }
 
-    real y = s_y[tid];
-
+    real y = s_y[tid];//先放在寄存器中
+    //因为我们的所有的线程间交互，都是在warp中的
     for (int offset = 16; offset > 0; offset >>= 1)
     {
-        y += __shfl_down_sync(FULL_MASK, y, offset);
+        y += __shfl_down_sync(FULL_MASK, y, offset); //warp内的所有元素，都拿到t+offset的值，因为这个内置函数，所以帮我们处理了tid+offset>32这种没有用的情况。非常好！
     }
 
     if (tid == 0)
     {
-        atomicAdd(d_y, y);
+        atomicAdd(d_y, y); //再把每个y加到d_y的返回值
     }
 }
 
@@ -127,15 +127,15 @@ void __global__ reduce_cp(const real *d_x, real *d_y, const int N)
 
     real y = s_y[tid];
 
-    thread_block_tile<32> g = tiled_partition<32>(this_thread_block());
+    thread_block_tile<32> g = tiled_partition<32>(this_thread_block()); //化成32线程的组 这是每个线程都知道的事
     for (int i = g.size() >> 1; i > 0; i >>= 1)
     {
-        y += g.shfl_down(y, i);
+        y += g.shfl_down(y, i); //当前的线程 //获得他后面偏差为size>>1的y 在同一个线程块里就可以这样做了。很帅
     }
 
     if (tid == 0)
     {
-        atomicAdd(d_y, y);
+        atomicAdd(d_y, y); //然后把y加进去
     }
 }
 
