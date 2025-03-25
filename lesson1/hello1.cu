@@ -24,7 +24,7 @@ __global__ void hello_from_gpu()
 int main(void)
 {
     hello_from_gpu<<<2,4>>>();
-    cudaDeviceSynchronize();
+    //cudaDeviceSynchronize();
     return 0;
 }
 //<<<线程块个数， 每个线程块里线程的个数
