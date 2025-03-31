@@ -7,25 +7,20 @@ __global__ void matrixMul(int *A, int *B, int *C, int n)
 {
     int row = blockIdx.y * blockDim.y + threadIdx.y;
     int col = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (row < n && col < n)
+    int sum = 0;
+    for (int k = 0; k < n; k++)
     {
-        int sum = 0;
-        for (int k = 0; k < n; k++)
-        {
-            sum += A[row * n + k] * B[k * n + col];
-        }
-        C[row * n + col] = sum;
+        sum += A[row * n + k] * B[k * n + col];
     }
+    C[row * n + col] = sum;
 }
-
 
 int main()
 {
     int size = N * N * sizeof(int);
-    int *h_A  = (int*)malloc(size);// 示例矩阵 A
-    int *h_B = (int*)malloc(size); // 示例矩阵 B
-    int *h_C = (int*)malloc(size); // 结果矩阵 C
+    int *h_A = (int *)malloc(size); // 示例矩阵 A
+    int *h_B = (int *)malloc(size); // 示例矩阵 B
+    int *h_C = (int *)malloc(size); // 结果矩阵 C
     for (int i = 0; i < N * N; i++)
     {
         h_A[i] = 1;
@@ -40,7 +35,7 @@ int main()
     cudaMemcpy(d_A, h_A, size, cudaMemcpyHostToDevice); // 拷贝到GPU中
     cudaMemcpy(d_B, h_B, size, cudaMemcpyHostToDevice);
 
-    dim3 threadsPerBlock(32, 32); // 每个线程块有16乘16个线程
+    dim3 threadsPerBlock(32, 32); // 每个线程块有32乘32 个线程
     dim3 blocksPerGrid((N + 31) / 32, (N + 31) / 32);
 
     cudaEvent_t start, stop;
@@ -53,18 +48,17 @@ int main()
 
     // 结束的模板
     cudaDeviceSynchronize();
-    cudaEventRecord(stop); 
+    cudaEventRecord(stop);
     cudaEventSynchronize(stop); // 相当于清空缓冲器
     float elapsed_time;
     cudaEventElapsedTime(&elapsed_time, start, stop); // 算出时间差
     printf("GPU：Time = %g ms \n", elapsed_time);
     // 清空内存
-    cudaEventDestroy(start); 
+    cudaEventDestroy(start);
     cudaEventDestroy(stop);
 
     cudaMemcpy(h_C, d_C, size, cudaMemcpyDeviceToHost);
 
-    
     free(h_A);
     free(h_B);
     free(h_C);
